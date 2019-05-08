@@ -134,6 +134,7 @@ class Simulation(gym.Env):
     # makes the game update a step, according to action
     # takes input from handle_events() or the ML algo
     def step(self, action=0):
+        # print (action)
         # time.sleep(0.01) # 100 fps, uncomment to have it at "normal" speed
 
         done = False
@@ -370,10 +371,10 @@ class Simulation(gym.Env):
                 print(counter) # game counter
                 # env.close() # plays only 1 round and closes if uncommented
 
-gym.register(id="gatherer-v0",
-             max_episode_steps=500,
-             entry_point="mystuff_q.environments.GatherEnvironment:Simulation"
-             )
+# gym.register(id="gatherer-v0",
+#              max_episode_steps=500,
+#              entry_point="mystuff_q.environments.GatherEnvironment:Simulation"
+#              )
 
 # print("imported simulation")
 

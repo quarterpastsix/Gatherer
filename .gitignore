@@ -1,0 +1,8 @@
+*
+!dqn_tf.py
+!GatherEnvShare.py
+!main_tf.py
+!tmp
+!tmp/q_eval
+!tmp/q_next
+!.gitignore
