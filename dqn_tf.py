@@ -55,9 +55,9 @@ class DeepQNetwork(object):
             self.Q_values = tf.layers.dense(dense1, units=self.n_actions,
                     kernel_initializer=tf.variance_scaling_initializer(scale=2))
 
-            self.q = tf.reduce_sum(tf.multiply(self.Q_values, self.actions))
+            #self.q = tf.reduce_sum(tf.multiply(self.Q_values, self.actions))
 
-            self.loss = tf.reduce_mean(tf.square(self.q - self.q_target))
+            self.loss = tf.reduce_mean(tf.square(self.Q_values - self.q_target))
 
             self.train_op = tf.train.AdamOptimizer(self.lr).minimize(self.loss)
 
@@ -114,40 +114,44 @@ class Agent(object):
         return action
 
     def learn(self):
-        if self.mem_cntr % self.replace_target == 0:
-            self.update_graph()
+        # Let's make sure we're taking a batch of distinct memories, rather
+        # than a list that looks like [0, 1, 0, 1, 1, ... etc.] on move 2
+        if self.mem_cntr > self.batch_size:
+            if self.mem_cntr % self.replace_target == 0:
+                self.update_graph()
 
-        max_mem = self.mem_cntr if self.mem_cntr < self.mem_size else self.mem_size
+            max_mem = self.mem_cntr if self.mem_cntr < self.mem_size else self.mem_size
 
-        batch = np.random.choice(max_mem, self.batch_size)
-        state_batch = self.state_memory[batch]
-        action_batch = self.action_memory[batch]
-        action_values = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=np.int8)
-        action_indices = np.dot(action_batch, action_values)
-        reward_batch = self.reward_memory[batch]
-        new_state_batch = self.new_state_memory[batch]
-        terminal_batch = self.terminal_memory[batch]
+            batch = np.random.choice(max_mem, self.batch_size)
+            state_batch = self.state_memory[batch]
+            action_batch = self.action_memory[batch]
+            action_values = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=np.int8)
+            action_indices = np.dot(action_batch, action_values)
+            reward_batch = self.reward_memory[batch]
+            new_state_batch = self.new_state_memory[batch]
+            terminal_batch = self.terminal_memory[batch]
 
-        q_eval = self.q_eval.sess.run(self.q_eval.Q_values,
-                                     feed_dict={self.q_eval.input: state_batch})
-        q_next = self.q_next.sess.run(self.q_next.Q_values,
-                                feed_dict={self.q_next.input: new_state_batch})
+            q_eval = self.q_eval.sess.run(self.q_eval.Q_values,
+                                         feed_dict={self.q_eval.input: state_batch})
+            q_next = self.q_next.sess.run(self.q_next.Q_values,
+                                    feed_dict={self.q_next.input: new_state_batch})
 
-        q_target = q_eval.copy()
+            q_target = q_eval.copy()
 
-        q_target[:, action_indices] = reward_batch + \
-                                self.gamma*np.max(q_next, axis=1)*terminal_batch
+            idx = np.arange(self.batch_size)
+            q_target[idx, action_indices] = reward_batch + \
+                                    self.gamma*np.max(q_next, axis=1)*terminal_batch
 
-        _ = self.q_eval.sess.run(self.q_eval.train_op,
-                        feed_dict={self.q_eval.input: state_batch,
-                                   self.q_eval.actions: action_batch,
-                                   self.q_eval.q_target: q_target})
+            _ = self.q_eval.sess.run(self.q_eval.train_op,
+                            feed_dict={self.q_eval.input: state_batch,
+                                       self.q_eval.actions: action_batch,
+                                       self.q_eval.q_target: q_target})
 
-        if self.mem_cntr > 100000:
-            if self.epsilon > 0.01:
-                self.epsilon *= 0.9999999
-            elif self.epsilon <= 0.01:
-                self.epsilon = 0.01
+            if self.mem_cntr > 2000:
+                if self.epsilon > 0.01:
+                    self.epsilon *= 0.99995
+                elif self.epsilon <= 0.01:
+                    self.epsilon = 0.01
 
     def save_models(self):
         self.q_eval.save_checkpoint()
